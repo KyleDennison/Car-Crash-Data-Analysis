@@ -1,0 +1,204 @@
+---
+title: "Project 1"
+author: "Kyle Dennison"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+# Load your libraries here
+
+library(mosaic)
+library(Lock5withR)
+library(Lock5Data)
+library(mosaicData)
+library(ggplot2)
+library(readxl)
+library(DescTools)
+# Import your data here
+ DWD2accident2017 <- read_excel("DWD2accident2017.xlsx")
+```
+
+# Project 1 Introduction
+
+We have a random sample of data on car crashes across the United States in 2017 from the Fatal Analysis Reporting System (FARS), as published by the National Highway Traffic Safety Administration. You can access the website [here](https://www-fars.nhtsa.dot.gov/QueryTool/QuerySection/SelectYear.aspx).
+
+Our data set contains person-level and crash-level data. That is, each row represents a single person who was involved in an auto crash in some way (as a driver, passenger, etc). The data for that person contains information about the person themselves (such as whether they were injured) but also about the conditions involved in the crash (such as the weather at the time, or whether it was a holiday or not).
+
+You can find both the data and a description of the variables in the file "DWD2accident2017.xlsx".
+
+# Project 1 Questions
+
+Answer the following questions to the best of your abilities. You may not discuss the answers or methods used with anyone else; if you have questions about the assignment, please contact the instructor.
+
+Each topic is deliberately open-ended. You are responsible for choosing the best approach(es) and interpreting the results into a coherent and well organized response. Be clear about what your results show and what they don't show, as well as any limitations of the data or analysis.
+
+Be thorough. Don't rush through or skip over details.
+
+Don't forget to import the data and load any packages needed in the setup code chunk.
+
+#### Topic 1
+
+I'd like to learn about what factors might be associated with the severity of the injuries observed (injured, fatality, etc.). Does it depend on the sex of the person? Or on whether or not drugs were involved? Choose whichever possible association seems more interesting and address it in detail. 
+
+```{r}
+fatalityTable <- tally(~ InjurySeverity + DrugInvolvement, data = DWD2accident2017)
+set.seed(1234)
+
+#Random Chi-Squared Test
+fatalityTest <- chisq.test(fatalityTable, simulate.p.value = TRUE)
+fatalityTest 
+
+#Theoretical Chi-Squared Test 
+fatalityTestTheoretical <- chisq.test(fatalityTable)
+fatalityTestTheoretical
+
+#Finding the expected counts 
+fatalityTest$expected
+fatalityTestTheoretical$expected
+
+```
+
+Since the goal is to test the association between two categorical variables, InjurySeverity and DrugInvolvement, the Chi-Squared Test of independence is the most appropiate tool to use. Before we begin it is important to ensure that the data fits the conditions of a Chi-Squared test, which means the data must be random and have at least 5 expected counts in each cell. We are assuming our data was collected randomly and can find the expected counts after creating the test. As can be seen above, all of the cells except unknown Injuryseverity, Yes DrugInvolvement have a value of at least 5, this is concerning but since it is only one case I believe that the Chi-Squared Test can still be used with this data.  
+
+We begin by creating the hypothesis that we wish to test, H0: P(No) = P(Unknown) = P(Yes) Ha: At least one of these is different.
+
+To conduct the theoretical chi-squared distribution to find the p-value the chisq.test method is used. To use a simulation based test, the simulate.p.value = TRUE parameter is added.  Fisher's exact test could have been used to get a more accurate result but is only useable if there are two categories for each variable which is not the case with this dataset. 
+
+Looking at the result's of the tests it can be seen that the simulated test had a p-value of 0.00049 and that the other had an even smaller 2.2 * 10^-16. With such a small p-value below 0.05 we have strong evidence to reject the null hypothesis that the population proportions for the different DrugInvolvement groups is the same. This shows evidence of an association between InjurySeverity and DrugInvolvement. 
+
+```{r}
+#Looking at residuals 
+fatalityTest$stdres
+```
+
+Looking at the residuals will give insight as to how the InjurySeverity categories differ based on DrugInvolvement. We expect the residuals to be 0 if the data were independent. Fatalities had much more DrugInvolvements that were Yes than what we would expect if the data was independent, the opposite can be seen in No apparent injury as well with a lot more DrugInvolvements that were No. This shows how different the response variable is for each condition of InjurySeverity.  
+
+```{r}
+#Strength of Associations
+temp <- fatalityTable[-4,]
+strengthTable <- temp[-3,]
+pTable <- prop.table(strengthTable, margin = 1)
+pTable
+
+no <- pTable[1, 1] - pTable[2, 1]
+no
+yes <- pTable[1, 3] - pTable[2, 3]
+yes
+```
+
+The last thing we would like to look at is the strength of the association. We can do this by using the difference of proportions which can only be done by looking at two groups at a time. This is done by removing rows from fatalityTable to create strengthTable so that we can observe just fatalities and injuries. First the table must be converted to proportions using the prop.table method, then you just select the column you want to look at and subtract the proportions. By looking at the no column for DrugInvolvment the difference of proportions is -0.006 which means that the proportion of Fatalities that had no drug involvement is 0.006 percentage points lower than a Injury having no drug involvement. By looking at the Yes column we can see that the difference is 0.03 meaning that the proportion of Fatalities that did have Drug involvement were 0.03 points higher than the proportion of Injuries that the did have a drug involvement. This procedure can be repeated the show the strengths of the other associations as well.
+
+Overall the Chi-Squared test of association has shown that there is an association between InjurySeverity and DrugInvolvement. Also the difference of proportions shows that the strength of the associations generally increase when Drug's were present. 
+
+#### Topic 2
+
+I'd like to know more about what variables might be associated with the ages of the people involved in accidents. Is there stronger evidence of an association between age and sex or betwen age and the person's role in the crash (e.g. driver, passenger, etc.)? Consider both possible associations.
+
+```{r}
+#Explore the data 
+set.seed(1234)
+newData <- filter(DWD2accident2017, Sex == "Male" | Sex == "Female")
+gf_boxplot(Age ~ Sex, data = DWD2accident2017)
+
+gf_boxplot(Age ~ Sex, data = newData)
+gf_boxplot(Age ~ PersonType, data = newData)
+gf_histogram(~Age| Sex, data = newData)
+gf_histogram(~Age | PersonType, data = newData)
+SexStats <- favstats(Age ~ Sex, data = newData)
+TypeStats <- favstats(Age ~ PersonType, data = newData)
+
+#Find Variance
+Sexsd <- SexStats$sd
+Typesd <- TypeStats$sd
+Sexvariance <- max(Sexsd) / min(Sexsd)
+Typevariance <- max(Typesd) / min(Typesd)
+Sexvariance
+Typevariance
+```
+
+Since the objective here is to look at differences in the mean of a quantitative response variable (Age), among many groups in a categorical variable (Sex, PersonType), a Analysis of Variance (ANOVA) is the best tool to use. Using this we can look at the association between Age and a person's sex as well as Age and a the role a person played in the crash. A Two-way ANOVA could have also been used here but since we are not interested in the relationship between Sex and PersonType two One-way ANOVA's is more appropiate. 
+
+The first thing that must be done is to check that the conditions for using an ANOVA are satisfied by this dataset, i.e it must be random, be normally distributed, and the groups must have the same variance. We can assume our data was collected randomly and since we are using a large sample size we don't need to worry about the normality, but we will look at it anyways. By looking at the histograms for Sex we can see that the male anad female graphs are more or less normally distributed, but the "Other"" category doesn't have enough cases to portray properly. Because this will cause an issue when trying to find standard deviations later I have decided to remove the "other" category which was done by filtering the dataset so that only cases where the Sex is defined as Male or Female are kept. This is also the case for the "Other"" category of PersonType, but since it is not as extremely small as in Sex it can be kept.Lastly the variance must be checked and since the largest standard deviation for each Sex and PersonType is less than twice as big as the smallest standard deviation both groups pass. Also by looking at the favstats of both variables it can be seen that all groups have means that are similair to each other and worth investigation.
+
+Now that we know all the conditions have been met we can create hypothesis tests. For the Sex variable H0: muMale = muFemale where mu is the average age of that groups population, and Ha: At least one of these is different. For the PersonType variable H0: muDriver = muPassenger = muCyclist = muOther and Ha: At least one of these is different. 
+
+```{r}
+set.seed(1234)
+Sex_anova <- aov(Age ~ Sex, data = newData)
+summary(Sex_anova)
+
+Type_anova <- aov(Age ~ PersonType, data = newData)
+summary(Type_anova)
+```
+
+Now that hypothesis test's have been decided the actual tests can be done using the aov method which gives a summary of the F statistic and p-value. A simulation test could have been used here if the the data was made up of small samples, but since we already passed all of the conditions we do not need to use it.
+
+For the Sex variable we can see that with a p-value of 0.131 (higher than 0.05) we have moderate evidence that we can not reject the hull hypothesis that the mean Age for Males is the same as Females. This means that there is no significant difference in Age between Males and Females of the study. For the PersonType variable we can see that with a p-value of 2 * 10^-16 (below 0.05) we have strong evidence to reject the null hypothesis that the avergae Age is equal for Driver, passenger, Cyclist, and other. This means that there is a significant difference in Age between all these types of people in a car accident. 
+
+```{r}
+set.seed(1234)
+PostHocTest(Type_anova, method = "hsd")
+```
+
+The last thing to do is to estimate the difference Age between groups of the PersonType variable. This was done using Tukey's HSD since this is the most accurate way to find multiple confidence intervals while managing to keep the overall confidence at 95%. By looking at Cyclist-Driver we can see that the confidence interval is (2.23, 6.38) which means that we are 95% confident that the average age of Cyclists is between 2.23 and 6.38 years higher than the average age of Drivers. This pattern can be followed to find the differences for all of the pairs in  the table.
+
+Thus by using an ANOVA we have found that there is no significant difference in Age between Sexs, and that is a significant difference between PersonTypes. Furthermore it can be seen that Cyclist are older than drivers, Drivers are older than passengers, and other are barely older than passengers. 
+
+#### Topic 3
+
+Tell me something else interesting that you can learn from the data (not one of the previous topics). Use this opportunity to demonstrate your understanding of any relevant topics we have covered so far, by exploring the topic or topics of your choice. 
+
+```{r}
+#Explore the data 
+set.seed(1234)
+gf_boxplot(Age ~ DrugInvolvement, data = DWD2accident2017)
+
+gf_boxplot(Age ~ DrugInvolvement, data = DWD2accident2017)
+gf_histogram(~Age| DrugInvolvement, data = DWD2accident2017)
+DrugStats <- favstats(Age ~ DrugInvolvement, data = DWD2accident2017)
+
+#Find Variance
+drugsd <- DrugStats$sd
+drugvariance <- max(drugsd) / min(drugsd)
+drugvariance
+```
+
+I would like to explore if there is a association between DrugInvolvement and Age, specifically I want to see what is considered an outlier in the groups. To do this I will use an ANOVA test then graph the residuals. 
+
+The first thing that must be done is that we must check that the data passes the conditions for an ANOVA. We can assume the data was collected randomly and since the sample size is large we do not need to worry about normality but will still investigate it. By looking at the histograms it is immediately clear that all groups are normally distributed except for Yes which dips in the center. Then the variability must be checked and since the largest standard deviation is less than twice as big as the smallest standard deviation the data passes all conditions. 
+
+
+The hypothesis tests are H0: muNo = muUnknown = muYes where mu is equal to the average age of that DrugInvolvement group, Ha: at least one of these is different. 
+
+```{r}
+set.seed(1234)
+Drug_anova <- aov(Age ~ DrugInvolvement, data = DWD2accident2017)
+summary(Drug_anova)
+```
+
+
+With a p-value of 2 * 10^-16 (below 0.05) we have strong evidence to reject the null hypothesis that the average Age of people with no, unknown, and Yes Drug involvement is equal. This means that there is significant difference in the average ages of these groups.  
+
+```{r}
+set.seed(1234)
+PostHocTest(Drug_anova, method = "hsd")
+```
+
+By using Tukey's HSD we can estimate the difference Age between groups of the DrugInvolvement variable. The Yes-No row shows that the confidence interval is (-8.4,-3.2) which means that we are 95% confident that the average age of people in the Yes DrugInvolvement category is between 3.2 and 8.4 years younger than those in the No category. 
+
+```{r}
+set.seed(1234)
+plot(Drug_anova, which =1)
+plot(Drug_anova, which =2)
+plot(Drug_anova, which =5) 
+```
+
+By using an ANOVA table we are granted acces to R's ability to create more indepth graphs of the residuals. The first graph shows residuals vs fitted, by looking at the Yaxis we can see that our rediduals within groups differs vastly from the fitted values aka sample means. Two of the groups are also very close together while there appears to be one group that is obvious outlier and hints that the group means will not be equal. The second graph is a QQplot that checks for normality, since the data follows the line pretty close we can see that our data is notmally distributed. The last graph shows Standardized residuals vs factor levels, again it can be seen that only two of the groups are similair and that they both contain extreme values. 
+
+By using an ANOVA we have found that there is significant difference in Age between groups of the DrugInvolvement variable. Interestingly we found that more of the accidents that involved drugs were caused by younger people, which makes sense. By exploring the visual portrayl of the residuals we also found evidence that one of these groups was going to be different since it has less extreme values. 
+
+
+
