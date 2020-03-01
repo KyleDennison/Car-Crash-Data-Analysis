@@ -1,3 +1,25 @@
-# Car-Crash-Data-Analysis
-This repository contains a Project1.rmd file that contains all of the RStudio code, a .html output of the .rmd file, and the dataset DWD2accidents2017. To run this project put the .rmd and data files in RStudio then knit the .rmd to create the .html file. 
-The first topic in the assignment is what factors might be associated with the severity of the injuries observed, to solve this I used a Random and theoretical Chi-Squared Test. The next topic wanted to see if there is stronger evidence of an association between age and sex or betwen age and the person's role in the crash, to accomplish this I used an Anova and PostHocTest. The last topic was to find something else interesting that you can learn from the data, I wanted to explore if there is a association between DrugInvolvement and Age, specifically I want to see what is considered an outlier in the groups. 
+# Car Crash Data Analysis
+
+![demo1](Pictures/demoPicture.png)
+
+The goal of this project is demonstrate understanding of statistical concepts by answering questions on different topics using a dataset of car accidents in 2017. The first topics covered in this project are random/theoretical Chi-Squared Tests, Anova,  associations, and PostHocTests.  
+
+### Getting Started 
+
+To run this project download and unzip the files from this directory and open the ModelingSuicideData.Rproj file inside of RStudio. 
+
+![Step 1](Pictures/instruction1.png)
+
+Then open the Project1.Rmd file, you may need to install required libraries. 
+
+Finally, select knit to run the program and receive the Project1.html output file
+
+![Step 2](Pictures/instruction2.png)
+
+### Built With 
+
+* RStudio - IDE
+
+### Authors 
+
+* Kyle Dennison - KyleDennison
